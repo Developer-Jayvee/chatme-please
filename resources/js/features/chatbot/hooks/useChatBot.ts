@@ -1,10 +1,11 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { Message } from "../types/hook.types.js";
 import { test_message } from "../data/chatbot.data.js";
 import axios from "axios";
 import useCheckConvoStatus from "./useCheckConvoStatus.js";
 import useChatConvos, { type ConvoListData } from "./useChatConvos.js";
 import { streamChat } from "../services/chatbot.service.js";
+import { useStream } from "@laravel/stream-react";
 
 interface ContentData {
     role: "agent" | "user";
@@ -19,6 +20,24 @@ export default function useChatBot() {
     const { checkConvoStatus, isAvailable } = useCheckConvoStatus();
     const { checkConvoList, convoList, convoDetails, showConvo } =
         useChatConvos();
+    const {
+        send,
+        data: aiResponse,
+        clearData
+    } = useStream("/chat", {
+        onData: (data) => {
+            setMessages((previous) => previous.map((n) => n.isComplete && n.role !== "agent" ? n : {
+                ...n,
+                content: n.content + " "+data,
+            }));
+        },
+        onFinish: () => {
+             setMessages((previous) => previous.map((n) => n.isComplete  && n.role !== "agent" ? n : {
+                ...n,
+                isComplete: true
+            }));
+        }
+    });
 
     const openConvo = async (convoId: string) => {
         const data: ConvoListData = await showConvo(convoId);
@@ -27,7 +46,8 @@ export default function useChatBot() {
                 data.messages.map((n) => ({
                     id: n.id,
                     content: n.content,
-                    sender: n.role,
+                    role: n.role,
+                    isComplete: true
                 })),
             );
             setConvoId(data.id);
@@ -43,10 +63,10 @@ export default function useChatBot() {
         setInput("");
     };
 
-    const storeUserMessage = async (content: Array<ContentData>) => {
+    const storeUserMessage = async (content: Array<Message>) => {
         const response = await axios.post(
             "/chat/insert",
-            { content },
+            { content: content.map((n) => ({...n,message : n.content})) },
             {
                 headers: {
                     "X-Convo-ID": convoId,
@@ -55,62 +75,27 @@ export default function useChatBot() {
         );
         const data = response?.data?.data;
         if (data) {
-            const userMessage = content.find(({ role }) => role === "user");
-            setMessages((previous) => [
-                ...previous,
-                {
-                    id: String(Date.now()),
-                    content: userMessage?.message ?? input,
-                    sender: "user",
-                },
-            ]);
+            setMessages(content);
         }
         return data;
     };
+
+
     const sendMessage = async (content?: string) => {
         if (!convoId) return;
         const message = (content ?? input).trim();
         if (!message) return;
 
-        await streamChat(
-            message,
-            (chunk) => {
-                console.log(chunk);
-                
-                setMessages((prev) => {
-                    const next = [...prev];
-                    next[next.length - 1] = {
-                        ...next[next.length - 1],
-                        text: next[next.length - 1].text + chunk,
-                    };
-                    return next;
-                });
-            },
-            () => {},
-        );
-        const response = await axios.post("/chat", {
+        const contents: Array<Message> = [
+            { role: "user", content: message, id: String(Date.now()), isComplete: true },
+            { role: "agent", content: " " , id: String(Date.now()), isComplete: false },
+        ];
+        await storeUserMessage(contents);
+        send({
             prompt: message,
         });
-        // const data = response?.data;
-        // const data = "Hello";
-        // if (!data?.response) return;
-        // setMessages((previous) => [
-        //     ...previous,
-        //     {
-        //         id: String(Date.now()),
-        //         content: data?.response,
-        //         sender: "agent",
-        //     },
-        // ]);
-
-        // const contents: Array<ContentData> = [
-        //     { role: "agent", message: data?.response },
-        //     { role: "user", message: message },
-        // ];
-        // await storeUserMessage(contents);
         setInput("");
     };
-
     return {
         isOpen,
         setIsOpen,

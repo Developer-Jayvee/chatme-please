@@ -27,7 +27,7 @@ class ChatBotController extends Controller
         $request->validate([
             'content' => ['array','required'],
             'content.*.role' => ['required','in:agent,user'],
-            'content.*.message' => ['required','string']
+            'content.*.message' => ['sometimes']
         ]);
         return $this->_service->insertMessage(
             Conversation::query()->findOrFail( $request->input('convo_id') ),

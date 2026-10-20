@@ -15,7 +15,7 @@ class AIChatService
         $chat = Gemini::generativeModel(model : $model)->startChat();
 
 
-        return response()->eventStream(function () use($chat,$prompt) {
+        return response()->stream(function () use($chat,$prompt) {
             $stream  = $chat->streamSendMessage($prompt);
             foreach ($stream as $response) {
                 $text = $response->text();

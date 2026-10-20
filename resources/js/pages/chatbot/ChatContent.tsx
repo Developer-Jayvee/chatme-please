@@ -32,7 +32,7 @@ export default function ChatContent() {
                     </div>
 
                     {messages.map((message) => {
-                        const isUser = message.sender === "user";
+                        const isUser = message.role === "user";
 
                         return (
                             <div

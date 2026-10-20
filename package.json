@@ -22,6 +22,7 @@
         "@base-ui/react": "^1.9.0",
         "@fontsource-variable/geist": "^5.3.0",
         "@inertiajs/react": "^3.9.1",
+        "@laravel/stream-react": "^0.3.19",
         "@types/react": "^19.3.0",
         "@types/react-dom": "^19.3.0",
         "axios": "^1.20.0",

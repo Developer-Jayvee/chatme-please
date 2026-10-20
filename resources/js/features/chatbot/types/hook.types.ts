@@ -2,5 +2,6 @@
 export interface Message {
   id: string;
   content: string;
-  sender: "user" | "agent";
+  role: "user" | "agent";
+  isComplete : boolean;
 }

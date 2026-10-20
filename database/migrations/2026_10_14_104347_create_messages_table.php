@@ -15,7 +15,7 @@ return new class extends Migration
             $table->id();
             $table->foreignId('conversation_id');
             $table->enum('role',['agent','user']);
-            $table->text('content');
+            $table->text('content')->nullable();
             $table->timestamps();
         });
     }
