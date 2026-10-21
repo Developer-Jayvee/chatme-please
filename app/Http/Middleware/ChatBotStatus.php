@@ -15,6 +15,9 @@ class ChatBotStatus
      *
      * @param  Closure(Request): (Response)  $next
      */
+
+    CONST MAX_PROMPTS = 10;
+
     public function handle(Request $request, Closure $next): Response
     {
         $convoId = $request->header('X-Convo-ID');
@@ -22,10 +25,10 @@ class ChatBotStatus
         if(! $convoId) {
             return response()->json(['data' => null, 'message' => "Conversation transaction required.", 'status' => false],403);
         }
-
         
         $convo = Message::query()->where('conversation_id',$convoId)->where('role','user');
-        if($convo->count() >= 5) {
+        
+        if($convo->count() >= self::MAX_PROMPTS) {
             return response()->json(['data' => null, 'message' => "Message Exceeded", 'status' => false],403);
         }
 

@@ -9,6 +9,7 @@ use Illuminate\Pagination\LengthAwarePaginator;
 
 class ChatBotService
 {
+    CONST MAX_PROMPTS = 10;
     public function startNewConvo(Request $request)
     {
         try {
@@ -25,38 +26,34 @@ class ChatBotService
         }
     }
 
-    public function insertMessage(Conversation $convo, array $content)
+    public function insertMessage(Conversation $convo, string $content, string $role)
     {
         try {
-            $response = [];
-            foreach ($content as $data) {
-                $message = $data['message'];
-                $role = $data['role'];
 
-                $chunk = explode(' ', $message);
-                $msgModel = Message::query()->where('conversation_id', $convo->id)->where('role', 'user');
+            $chunk = explode(' ', $content);
+            $msgModel = Message::query()->where('conversation_id', $convo->id)->where('role', 'user');
 
-                if ($msgModel->count() === 5) {
-                    return response()->json(['data' => null, 'message' => 'Message exceeded on this context window', 'status' => false], 401);
-                }
+            if ($msgModel->count() === self::MAX_PROMPTS) {
+                return response()->json(['data' => null, 'message' => 'Message exceeded on this context window', 'status' => false], 401);
+            }
 
-                if ($msgModel->count() <= 0) {
-                    $convo->update([
-                        'title' => $chunk[0],
-                    ]);
-                }
-
-                $response[] = Message::query()->create([
-                    'content' => $message,
-                    'conversation_id' => $convo->id,
-                    'is_open' => $msgModel->count() !== 4,
-                    'role' => $role,
-
+            if ($msgModel->count() <= 0) {
+                $convo->update([
+                    'title' => $chunk[0],
                 ]);
             }
 
+            $messageData = Message::query()->create([
+                'content' => $content,
+                'conversation_id' => $convo->id,
+                'is_open' => $msgModel->count() !== 4,
+                'role' => $role,
+
+            ]);
+    
+
             return response()->json([
-                'data' => $response,
+                'data' => $messageData,
                 'message' => 'Success',
                 'status' => true,
             ]);

@@ -22,16 +22,16 @@ class ChatBotController extends Controller
         return $this->_service->startNewConvo($request);
     }
 
-    public function updateChat(Request $request)
+    public function insertChat(Request $request)
     {
         $request->validate([
-            'content' => ['array','required'],
-            'content.*.role' => ['required','in:agent,user'],
-            'content.*.message' => ['sometimes']
+            'content' => ['string','required'],
+            'role' => ['required','in:agent,user'],
         ]);
         return $this->_service->insertMessage(
-            Conversation::query()->findOrFail( $request->input('convo_id') ),
-            $request->input('content'),
+            convo: Conversation::query()->findOrFail( $request->input('convo_id') ),
+            content: $request->input('content'),
+            role: $request->input('role')
         );
     }
 

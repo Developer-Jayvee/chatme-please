@@ -11,31 +11,78 @@ interface ContentData {
     role: "agent" | "user";
     message: string;
 }
+interface InsertMessageResponseData {
+    content: string;
+    conversation_id: number;
+    created_at: string;
+    id: number;
+    role:  "agent" | "user";
+}
+
+const storeMessage = async ({
+    content,
+    convoId,
+}: {
+    content: Message;
+    convoId: string;
+}): Promise<InsertMessageResponseData> => {
+    const response = await axios.post(
+        "/chat/insert",
+        { content: content.content, role: content.role },
+        {
+            headers: {
+                "X-Convo-ID": convoId,
+            },
+        },
+    );
+    return response?.data?.data as InsertMessageResponseData;
+};
+
+
+
 export default function useChatBot() {
     const [isOpen, setIsOpen] = useState<boolean>(true);
     const [isMinimized, setIsMinimized] = useState<boolean>(false);
     const [input, setInput] = useState<string>("");
     const [messages, setMessages] = useState<Message[]>([]);
     const [convoId, setConvoId] = useState<string | undefined>();
+    const [streamMessage,setStreamMessage] = useState<string|null>();
+
     const { checkConvoStatus, isAvailable } = useCheckConvoStatus();
-    const { checkConvoList, convoList, convoDetails, showConvo } =
-        useChatConvos();
-    const {
-        send,
-        data: aiResponse,
-        clearData
-    } = useStream("/chat", {
+    const { checkConvoList, convoList, convoDetails, showConvo } = useChatConvos();
+
+    console.log(convoId);
+    
+
+    const streamAI = useStream("/chat", {
+        onBeforeSend: (request) => ({
+            ...request,
+            headers: {
+                "X-Convo-ID": convoId ?? "",
+            },
+
+        }),
         onData: (data) => {
-            setMessages((previous) => previous.map((n) => n.isComplete && n.role !== "agent" ? n : {
-                ...n,
-                content: n.content + " "+data,
-            }));
+            setStreamMessage(prev => prev + data);
         },
-        onFinish: () => {
-             setMessages((previous) => previous.map((n) => n.isComplete  && n.role !== "agent" ? n : {
-                ...n,
-                isComplete: true
-            }));
+        onFinish: async () => {
+            if(! streamMessage || !convoId) return;
+            const response = await storeMessage({
+                content: { role: "agent", content: streamMessage, id: String(Date.now()), isComplete: true  },
+                convoId
+            });
+
+            if(! response) return;
+
+            setMessages(prev => [
+                ...prev,
+                {
+                    id: String(response.id),
+                    content: response.content,
+                    role: response.role,
+                    isComplete: true
+                }
+            ]);
         }
     });
 
@@ -63,37 +110,31 @@ export default function useChatBot() {
         setInput("");
     };
 
-    const storeUserMessage = async (content: Array<Message>) => {
-        const response = await axios.post(
-            "/chat/insert",
-            { content: content.map((n) => ({...n,message : n.content})) },
-            {
-                headers: {
-                    "X-Convo-ID": convoId,
-                },
-            },
-        );
-        const data = response?.data?.data;
-        if (data) {
-            setMessages(content);
-        }
-        return data;
-    };
-
 
     const sendMessage = async (content?: string) => {
         if (!convoId) return;
         const message = (content ?? input).trim();
         if (!message) return;
 
-        const contents: Array<Message> = [
-            { role: "user", content: message, id: String(Date.now()), isComplete: true },
-            { role: "agent", content: " " , id: String(Date.now()), isComplete: false },
-        ];
-        await storeUserMessage(contents);
-        send({
-            prompt: message,
+
+        const response =  await storeMessage({ 
+            content: { role: "user", content: message, id: String(Date.now()), isComplete: true  },
+            convoId
         });
+        if( response ) {
+            setMessages(prev => [
+                ...prev,
+                {
+                    id: String(response.id),
+                    content: response.content,
+                    role: response.role,
+                    isComplete: true
+                }
+            ])
+            streamAI.send({
+                prompt: message,
+            });
+        }
         setInput("");
     };
     return {

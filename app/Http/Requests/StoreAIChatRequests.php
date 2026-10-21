@@ -23,7 +23,8 @@ class StoreAIChatRequests extends FormRequest
     public function rules(): array
     {
         return [
-            'prompt' => ['string','required']
+            'prompt' => ['string','required'],
+            'convo_id' => ['string','required','exists:conversations,id']
         ];
     }
 }
