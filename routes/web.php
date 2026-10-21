@@ -14,6 +14,5 @@ Route::middleware('convo-status')->get('/chat/status', function () {
     return response()->json(['status' => true],200);
 });
 Route::middleware(["throttle:5,1",'convo-status'])
-
 ->withoutMiddleware([\App\Http\Middleware\HandleInertiaRequests::class])
 ->post('/chat',[AIChatController::class, 'prompt']);
