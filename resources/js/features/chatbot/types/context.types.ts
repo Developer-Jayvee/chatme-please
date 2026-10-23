@@ -20,4 +20,7 @@ export interface ChatBotContextData {
     convoList : ConvoListData[];
     convoDetails: ConvoListData | undefined;
     showConvo: (convoId: string) => Promise<void>;
+    isGenerating: boolean;
+    isFetching: boolean;
+    isStreamError: boolean;
 }

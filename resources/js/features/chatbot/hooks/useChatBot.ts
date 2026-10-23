@@ -48,6 +48,7 @@ export default function useChatBot() {
     const [convoId, setConvoId] = useState<string | undefined>();
     const [streamMessage,setStreamMessage] = useState<string|null>();
     const [isStreamCompleted,setIsStreamCompleted] = useState<boolean>(false);
+    const [isStreamError,setIsStreamError] = useState<boolean>(false);
     const { checkConvoStatus, isAvailable } = useCheckConvoStatus();
     const { checkConvoList, convoList, convoDetails, showConvo } = useChatConvos();
 
@@ -58,10 +59,10 @@ export default function useChatBot() {
                 ...request.headers,
                 "X-Convo-ID": convoId ?? "",
             },
-
         }),
         onData: (data) => {
-            setStreamMessage(prev => prev + data);
+            setIsStreamError(false);
+            setStreamMessage(prev => (prev ?? "") + data);
         },
         onFinish: async () => {
             try {
@@ -82,10 +83,14 @@ export default function useChatBot() {
                         isComplete: true
                     }
                 ]);
-                
+            } catch(err) {
+                setIsStreamError(true);
             } finally {
                 setIsStreamCompleted(true)
             }
+        },
+        onError(error) {
+            setIsStreamError(true);
         },
         
     });
@@ -163,6 +168,7 @@ export default function useChatBot() {
         openConvo,
         isGenerating: streamAI.isStreaming,
         isFetching: streamAI.isFetching,
-        isStreamCompleted
+        isStreamCompleted,
+        isStreamError
     };
 }

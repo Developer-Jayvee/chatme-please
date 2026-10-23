@@ -28,7 +28,10 @@ export const ChatBotProvider = ({
         messages,
         convoId,
         checkConvoStatus, isAvailable,
-        checkConvoList, convoList, convoDetails, openConvo
+        checkConvoList, convoList, convoDetails, openConvo,
+        isGenerating,
+        isFetching,
+        isStreamError
     } = useChatBot();
 
     useEffect(() => {
@@ -57,6 +60,9 @@ export const ChatBotProvider = ({
                 convoList,
                 convoDetails,
                 showConvo: openConvo,
+                isGenerating,
+                isFetching,
+                isStreamError
             }}
         >
             {children}

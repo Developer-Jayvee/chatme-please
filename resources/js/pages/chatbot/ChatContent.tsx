@@ -6,6 +6,8 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useChatBotContext } from "@/context/ChatBotContext.js";
 import { useEffect } from "react";
+import { Dots } from "@/components/loading-ui/dots.js";
+import { BobbingDots } from "@/components/loading-ui/bobbing-dots.js";
 
 export default function ChatContent() {
     const {
@@ -16,11 +18,17 @@ export default function ChatContent() {
         isPromptOpen: isAvailable,
         convoId,
         checkConvoStatus,
+        isGenerating,
+        isFetching,
+        isStreamError
     } = useChatBotContext();
     useEffect(() => {
         if (messages.length > 0 && convoId) checkConvoStatus(convoId);
     }, [messages]);
 
+
+    console.log(isStreamError);
+    
     return (
         <CardContent className="flex min-h-0 flex-1 flex-col overflow-hidden bg-white p-0">
             <ScrollArea className="min-h-0 flex-1">
@@ -69,10 +77,39 @@ export default function ChatContent() {
                             </div>
                         );
                     })}
+
+                    {isFetching && (
+                        <div className="flex items-center gap-2">
+                            <Avatar className="mt-0.5 h-8 w-8 shrink-0">
+                                <AvatarFallback className="bg-emerald-700 text-white">
+                                    <Bot className="h-4 w-4" />
+                                </AvatarFallback>
+                            </Avatar>
+                            <BobbingDots className="w-10" />
+                        </div>
+                    )}
                 </div>
             </ScrollArea>
 
             <div className="shrink-0 bg-white px-4 pb-4 pt-2 sm:px-8 sm:pb-6">
+                { isStreamError && (
+                    <div
+                        role="alert"
+                        className="mx-auto mb-3 flex w-full max-w-3xl items-start gap-3 rounded-2xl border border-rose-200 bg-rose-50 p-4 text-rose-950 shadow-sm"
+                    >
+                        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-rose-100 text-rose-700">
+                            <AlertTriangle className="h-5 w-5" />
+                        </div>
+                        <div className="pt-0.5">
+                            <p className="text-sm font-semibold">
+                                Error in our service
+                            </p>
+                            <p className="mt-1 text-sm leading-5 text-rose-800">
+                                Please try again later
+                            </p>
+                        </div>
+                    </div>
+                )}
                 {!isAvailable && (
                     <div
                         role="alert"
@@ -82,9 +119,12 @@ export default function ChatContent() {
                             <AlertTriangle className="h-5 w-5" />
                         </div>
                         <div className="pt-0.5">
-                            <p className="text-sm font-semibold">Chat limit reached</p>
+                            <p className="text-sm font-semibold">
+                                Chat limit reached
+                            </p>
                             <p className="mt-1 text-sm leading-5 text-rose-800">
-                                This conversation has reached its maximum prompt limit. Start a new chat to continue.
+                                This conversation has reached its maximum prompt
+                                limit. Start a new chat to continue.
                             </p>
                         </div>
                     </div>
@@ -100,7 +140,7 @@ export default function ChatContent() {
                         mx-auto flex w-full max-w-3xl items-center gap-3 rounded-3xl border  bg-white px-4 py-2.5 shadow-sm transition-colors focus-within:border-gray-300 focus-within:shadow-md`}
                 >
                     <Input
-                        disabled={!isAvailable}
+                        disabled={!isAvailable || isStreamError}
                         value={input}
                         onChange={(event) => setInput(event.target.value)}
                         placeholder="Message Chat me please"
@@ -110,7 +150,7 @@ export default function ChatContent() {
                     <Button
                         type="submit"
                         size="icon"
-                        disabled={!input.trim() || !isAvailable}
+                        disabled={!input.trim() || !isAvailable || isStreamError}
                         className="disabled:cursor-not-allowed cursor-pointer h-9 w-9 shrink-0 rounded-full bg-gray-900 text-white hover:bg-gray-700"
                         aria-label="Send message"
                     >
