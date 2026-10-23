@@ -27,7 +27,6 @@ class ChatBotStatus
         }
         
         $convo = Message::query()->where('conversation_id',$convoId)->where('role','user');
-        
         if($convo->count() >= self::MAX_PROMPTS) {
             return response()->json(['data' => null, 'message' => "Message Exceeded", 'status' => false],403);
         }

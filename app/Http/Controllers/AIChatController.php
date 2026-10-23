@@ -14,6 +14,10 @@ class AIChatController extends Controller
     ) {}
     public function prompt(StoreAIChatRequests $request)
     {
+        $request->validate([
+            'prompt' => ['string','required'],
+            'convo_id' => ['required','exists:conversations,id']
+        ]);
         return $this->_service->generate(
             prompt: $request->input('prompt'),
             convo: Conversation::query()->findOrFail($request->input('convo_id'))
