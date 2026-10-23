@@ -12,7 +12,9 @@ class Conversation extends Model
     protected $fillable = [
         'code',
         'title',
-        'is_open'
+        'is_open',
+        'summary',
+        'last_message_summary_id'
     ];
 
     #[Override]

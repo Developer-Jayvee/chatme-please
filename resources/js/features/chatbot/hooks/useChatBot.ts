@@ -4,7 +4,6 @@ import { test_message } from "../data/chatbot.data.js";
 import axios from "axios";
 import useCheckConvoStatus from "./useCheckConvoStatus.js";
 import useChatConvos, { type ConvoListData } from "./useChatConvos.js";
-import { streamChat } from "../services/chatbot.service.js";
 import { useStream } from "@laravel/stream-react";
 
 interface ContentData {
@@ -16,7 +15,7 @@ interface InsertMessageResponseData {
     conversation_id: number;
     created_at: string;
     id: number;
-    role:  "agent" | "user";
+    role: "agent" | "user";
 }
 
 const storeMessage = async ({
@@ -38,19 +37,18 @@ const storeMessage = async ({
     return response?.data?.data as InsertMessageResponseData;
 };
 
-
-
 export default function useChatBot() {
     const [isOpen, setIsOpen] = useState<boolean>(true);
     const [isMinimized, setIsMinimized] = useState<boolean>(false);
     const [input, setInput] = useState<string>("");
     const [messages, setMessages] = useState<Message[]>([]);
     const [convoId, setConvoId] = useState<string | undefined>();
-    const [streamMessage,setStreamMessage] = useState<string|null>();
-    const [isStreamCompleted,setIsStreamCompleted] = useState<boolean>(false);
-    const [isStreamError,setIsStreamError] = useState<boolean>(false);
+    const [streamMessage, setStreamMessage] = useState<string | null>();
+    const [isStreamCompleted, setIsStreamCompleted] = useState<boolean>(false);
+    const [isStreamError, setIsStreamError] = useState<boolean>(false);
     const { checkConvoStatus, isAvailable } = useCheckConvoStatus();
-    const { checkConvoList, convoList, convoDetails, showConvo } = useChatConvos();
+    const { checkConvoList, convoList, convoDetails, showConvo } =
+        useChatConvos();
 
     const streamAI = useStream("/chat", {
         onBeforeSend: (request) => ({
@@ -62,37 +60,41 @@ export default function useChatBot() {
         }),
         onData: (data) => {
             setIsStreamError(false);
-            setStreamMessage(prev => (prev ?? "") + data);
+            setStreamMessage((prev) => (prev ?? "") + data);
         },
         onFinish: async () => {
             try {
-                if(! streamMessage || !convoId) return;
+                if (!streamMessage || !convoId) return;
                 const response = await storeMessage({
-                    content: { role: "agent", content: streamMessage, id: String(Date.now()), isComplete: true  },
-                    convoId
+                    content: {
+                        role: "agent",
+                        content: streamMessage,
+                        id: String(Date.now()),
+                        isComplete: true,
+                    },
+                    convoId,
                 });
-    
-                if(! response) return;
-    
-                setMessages(prev => [
+
+                if (!response) return;
+
+                setMessages((prev) => [
                     ...prev,
                     {
                         id: String(response.id),
                         content: response.content,
                         role: response.role,
-                        isComplete: true
-                    }
+                        isComplete: true,
+                    },
                 ]);
-            } catch(err) {
+            } catch (err) {
                 setIsStreamError(true);
             } finally {
-                setIsStreamCompleted(true)
+                setIsStreamCompleted(true);
             }
         },
         onError(error) {
             setIsStreamError(true);
         },
-        
     });
     const openConvo = async (convoId: string) => {
         const data: ConvoListData = await showConvo(convoId);
@@ -102,7 +104,7 @@ export default function useChatBot() {
                     id: n.id,
                     content: n.content,
                     role: n.role,
-                    isComplete: true
+                    isComplete: true,
                 })),
             );
             setConvoId(data.id);
@@ -118,33 +120,42 @@ export default function useChatBot() {
         setInput("");
     };
 
-
     const sendMessage = async (content?: string) => {
-        if (!convoId) return;
-        const message = (content ?? input).trim();
-        if (!message) return;
+        try {
+            if (!convoId) return;
+            const message = (content ?? input).trim();
+            if (!message) return;
 
-        const response =  await storeMessage({ 
-            content: { role: "user", content: message, id: String(Date.now()), isComplete: true  },
-            convoId
-        });
-        if( response ) {
-            setMessages(prev => [
-                ...prev,
-                {
-                    id: String(response.id),
-                    content: response.content,
-                    role: response.role,
-                    isComplete: true
-                }
-            ])
-            streamAI.send({
-                prompt: message,
-                convo_id: convoId
+            const response = await storeMessage({
+                content: {
+                    role: "user",
+                    content: message,
+                    id: String(Date.now()),
+                    isComplete: true,
+                },
+                convoId,
             });
-            await checkConvoList();
+            if (response) {
+                setMessages((prev) => [
+                    ...prev,
+                    {
+                        id: String(response.id),
+                        content: response.content,
+                        role: response.role,
+                        isComplete: true,
+                    },
+                ]);
+                streamAI.send({
+                    prompt: message,
+                    convo_id: convoId,
+                });
+                await checkConvoList();
+            }
+        } catch (error) {
+            setIsStreamError(true);
+        } finally {
+            setInput("");
         }
-        setInput("");
     };
     return {
         isOpen,
@@ -169,6 +180,6 @@ export default function useChatBot() {
         isGenerating: streamAI.isStreaming,
         isFetching: streamAI.isFetching,
         isStreamCompleted,
-        isStreamError
+        isStreamError,
     };
 }

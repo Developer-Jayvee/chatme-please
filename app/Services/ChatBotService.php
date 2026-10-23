@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Jobs\SummaryModelJob;
 use App\Models\Conversation;
 use App\Models\Message;
 use Illuminate\Http\Request;
@@ -9,11 +10,13 @@ use Illuminate\Pagination\LengthAwarePaginator;
 
 class ChatBotService
 {
-    CONST MAX_PROMPTS = 10;
+    const MAX_PROMPTS = 10;
+
     public function startNewConvo(Request $request)
     {
         try {
             $model = Conversation::query()->create(['title' => 'New']);
+
             return response()->json([
                 'data' => $model->fresh(),
                 'message' => 'Success',
@@ -21,9 +24,7 @@ class ChatBotService
             ]);
         } catch (\Exception $ex) {
             return response()->json(['data' => null, 'message' => $ex->getMessage(), 'status' => false], 500);
-        } finally {
-            
-        }
+        } 
     }
 
     public function insertMessage(Conversation $convo, string $content, string $role)
@@ -50,7 +51,10 @@ class ChatBotService
                 'role' => $role,
 
             ]);
-    
+
+            if($role === 'agent') {
+                SummaryModelJob::dispatch($convo);
+            }
 
             return response()->json([
                 'data' => $messageData,
@@ -68,11 +72,12 @@ class ChatBotService
         try {
             $perPage = $request->query('perPage', 20);
             $page = $request->query('page', 1);
-            
+
             $data = collect(Conversation::query()->with('messages')->get());
             $sorted = $data->sortByDesc('created_at');
+
             return new LengthAwarePaginator(
-                $sorted->forPage($page,$perPage)->values(),
+                $sorted->forPage($page, $perPage)->values(),
                 $sorted->count(),
                 $perPage,
                 $page
@@ -87,7 +92,7 @@ class ChatBotService
         try {
             return response()->json([
                 'data' => Conversation::query()->with('messages')->findOrFail($convoId),
-                'status' => true
+                'status' => true,
             ]);
         } catch (\Throwable $ex) {
             return response()->json(['data' => null, 'message' => $ex->getMessage(), 'status' => false], 500);
